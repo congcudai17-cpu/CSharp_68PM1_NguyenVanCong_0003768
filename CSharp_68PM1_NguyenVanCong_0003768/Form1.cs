@@ -20,8 +20,9 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
 
             if (emailNhap == emailSinhVien && matKhauNhap == mssv)
             {
-                MessageBox.Show("Đăng nhập thành công!", "Thông báo",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Form2 frm = new Form2();
+                frm.Show();
+                this.Hide();
             }
             else
             {
