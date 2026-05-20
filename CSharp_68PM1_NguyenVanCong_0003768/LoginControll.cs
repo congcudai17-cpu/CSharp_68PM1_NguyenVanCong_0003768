@@ -3,16 +3,19 @@ using System.Windows.Forms;
 
 namespace CSharp_68PM1_NguyenVanCong_0003768
 {
-    public partial class Form1 : Form
+    public partial class LoginControl : UserControl
     {
-        public Form1()
+        // Event để thông báo đăng nhập thành công lên Form cha
+        public event EventHandler LoginSuccess;
+
+        public LoginControl()
         {
             InitializeComponent();
         }
 
         private void btnDangNhap_Click(object sender, EventArgs e)
         {
-            string emailSinhVien = "nguyenvancong@gmail.com";
+            string emailSinhVien = "0003768@st.huce.edu.vn";
             string mssv = "0003768";
 
             string emailNhap = txtEmail.Text.Trim();
@@ -20,9 +23,7 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
 
             if (emailNhap == emailSinhVien && matKhauNhap == mssv)
             {
-                Form2 frm = new Form2();
-                frm.Show();
-                this.Hide();
+                LoginSuccess?.Invoke(this, EventArgs.Empty);
             }
             else
             {
@@ -36,21 +37,6 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
             txtEmail.Clear();
             txtMatKhau.Clear();
             txtEmail.Focus();
-        }
-
-        private void lblTitle_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-
-        }
-
-        private void lblMatKhau_Click(object sender, EventArgs e)
-        {
-
         }
     }
 }
