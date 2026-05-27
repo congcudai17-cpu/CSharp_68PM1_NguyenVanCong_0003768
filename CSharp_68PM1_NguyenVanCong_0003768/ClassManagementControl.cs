@@ -1,5 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -10,14 +11,16 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
         public event EventHandler LogoutRequested;
         public event EventHandler ViewStudentsRequested;
 
-        private List<string[]> dsLop = new List<string[]>
-        {
-            new string[] { "1", "68PM1", "Lớp 68PM1", "abc" },
-            new string[] { "2", "68PM2", "Lớp 68PM2", "xyz" },
-        };
+        // ── Thay đổi connection string nếu cần ──────────────────────────────
+        private readonly string connStr =
+            "Server=CONGCHIMDAI;Database=qlsv;Integrated Security=True;";
+        // Nếu dùng SQL Auth thì dùng dòng dưới (xoá dòng trên):
+        // "Server=CONGCHIMDAI;Database=qlsv;User Id=sa;Password=YOUR_PASSWORD;";
+        // ────────────────────────────────────────────────────────────────────
 
         private int currentPage = 1;
         private int pageSize = 10;
+        private string currentKeyword = "";
 
         public ClassManagementControl()
         {
@@ -25,92 +28,187 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
             HienThiDanhSach();
         }
 
-        private void HienThiDanhSach(string keyword = "")
+        // ── Lấy tổng số bản ghi (có filter) ─────────────────────────────────
+        private int GetTotalCount(string keyword)
         {
-            dgvLop.Rows.Clear();
-            int start = (currentPage - 1) * pageSize;
-            int count = 0;
-
-            foreach (var lop in dsLop)
+            string sql = @"SELECT COUNT(*) FROM [qlsv].[dbo].[tbl_lophoc]
+                           WHERE (@kw = '' OR
+                                  CAST(id AS NVARCHAR) LIKE '%'+@kw+'%' OR
+                                  malop  LIKE '%'+@kw+'%' OR
+                                  tenlop LIKE '%'+@kw+'%')";
+            using (var conn = new SqlConnection(connStr))
+            using (var cmd = new SqlCommand(sql, conn))
             {
-                bool match = string.IsNullOrEmpty(keyword) ||
-                             lop[0].ToLower().Contains(keyword) ||
-                             lop[1].ToLower().Contains(keyword) ||
-                             lop[2].ToLower().Contains(keyword);
-                if (match) count++;
-            }
-
-            int totalPages = Math.Max(1, (int)Math.Ceiling(count / (double)pageSize));
-            lblTrang.Text = $"Trang {currentPage}/{totalPages}  |  {count} bản ghi";
-
-            int added = 0, skipped = 0;
-            foreach (var lop in dsLop)
-            {
-                bool match = string.IsNullOrEmpty(keyword) ||
-                             lop[0].ToLower().Contains(keyword) ||
-                             lop[1].ToLower().Contains(keyword) ||
-                             lop[2].ToLower().Contains(keyword);
-                if (!match) continue;
-                if (skipped < start) { skipped++; continue; }
-                if (added >= pageSize) break;
-                dgvLop.Rows.Add(lop);
-                added++;
+                cmd.Parameters.AddWithValue("@kw", keyword);
+                conn.Open();
+                return (int)cmd.ExecuteScalar();
             }
         }
 
+        // ── Load dữ liệu từ DB lên DataGridView ─────────────────────────────
+        private void HienThiDanhSach(string keyword = "")
+        {
+            currentKeyword = keyword;
+            dgvLop.Rows.Clear();
+
+            try
+            {
+                int total = GetTotalCount(keyword);
+                int totalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+                if (currentPage > totalPages) currentPage = totalPages;
+                lblTrang.Text = $"Trang {currentPage}/{totalPages}  |  {total} bản ghi";
+
+                int offset = (currentPage - 1) * pageSize;
+
+                string sql = @"SELECT id, malop, tenlop, ghichu
+                               FROM [qlsv].[dbo].[tbl_lophoc]
+                               WHERE (@kw = '' OR
+                                      CAST(id AS NVARCHAR) LIKE '%'+@kw+'%' OR
+                                      malop  LIKE '%'+@kw+'%' OR
+                                      tenlop LIKE '%'+@kw+'%')
+                               ORDER BY id
+                               OFFSET @offset ROWS FETCH NEXT @size ROWS ONLY";
+
+                using (var conn = new SqlConnection(connStr))
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@kw", keyword);
+                    cmd.Parameters.AddWithValue("@offset", offset);
+                    cmd.Parameters.AddWithValue("@size", pageSize);
+                    conn.Open();
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            dgvLop.Rows.Add(
+                                reader["id"].ToString(),
+                                reader["malop"].ToString(),
+                                reader["tenlop"].ToString(),
+                                reader["ghichu"].ToString()
+                            );
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi kết nối database:\n" + ex.Message,
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // ── Thêm lớp mới vào DB ──────────────────────────────────────────────
         private void BtnThem_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtMaLop.Text) ||
                 string.IsNullOrWhiteSpace(txtTenLop.Text))
             {
-                MessageBox.Show("Vui lòng nhập đầy đủ thông tin!", "Thông báo",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng nhập đầy đủ Mã lớp và Tên lớp!",
+                    "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            string newId = (dsLop.Count + 1).ToString();
-            dsLop.Add(new string[] {
-                newId,
-                txtMaLop.Text.Trim(),
-                txtTenLop.Text.Trim(),
-                txtGhiChu.Text.Trim()
-            });
-            HienThiDanhSach();
-            MessageBox.Show("Thêm lớp thành công!", "Thông báo",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void BtnSua_Click(object sender, EventArgs e)
-        {
-            if (dgvLop.CurrentRow == null) return;
-            int idx = dgvLop.CurrentRow.Index;
-
-            dsLop[idx] = new string[] {
-                txtMaID.Text.Trim(),
-                txtMaLop.Text.Trim(),
-                txtTenLop.Text.Trim(),
-                txtGhiChu.Text.Trim()
-            };
-            HienThiDanhSach();
-            MessageBox.Show("Cập nhật thành công!", "Thông báo",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void BtnXoa_Click(object sender, EventArgs e)
-        {
-            if (dgvLop.CurrentRow == null) return;
-            int idx = dgvLop.CurrentRow.Index;
-
-            var result = MessageBox.Show("Bạn có chắc muốn xóa lớp này?", "Xác nhận",
-                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            if (result == DialogResult.Yes)
+            try
             {
-                dsLop.RemoveAt(idx);
-                HienThiDanhSach();
+                string sql = @"INSERT INTO [qlsv].[dbo].[tbl_lophoc] (malop, tenlop, ghichu)
+                               VALUES (@malop, @tenlop, @ghichu)";
+                using (var conn = new SqlConnection(connStr))
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@malop", txtMaLop.Text.Trim());
+                    cmd.Parameters.AddWithValue("@tenlop", txtTenLop.Text.Trim());
+                    cmd.Parameters.AddWithValue("@ghichu", txtGhiChu.Text.Trim());
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                HienThiDanhSach(currentKeyword);
+                LamMoi();
+                MessageBox.Show("Thêm lớp thành công!", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi thêm:\n" + ex.Message,
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
-        private void BtnLamMoi_Click(object sender, EventArgs e)
+        // ── Sửa lớp trong DB ─────────────────────────────────────────────────
+        private void BtnSua_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtMaID.Text))
+            {
+                MessageBox.Show("Vui lòng chọn một lớp để sửa!",
+                    "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                string sql = @"UPDATE [qlsv].[dbo].[tbl_lophoc]
+                               SET malop=@malop, tenlop=@tenlop, ghichu=@ghichu
+                               WHERE id=@id";
+                using (var conn = new SqlConnection(connStr))
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@id", int.Parse(txtMaID.Text.Trim()));
+                    cmd.Parameters.AddWithValue("@malop", txtMaLop.Text.Trim());
+                    cmd.Parameters.AddWithValue("@tenlop", txtTenLop.Text.Trim());
+                    cmd.Parameters.AddWithValue("@ghichu", txtGhiChu.Text.Trim());
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                HienThiDanhSach(currentKeyword);
+                LamMoi();
+                MessageBox.Show("Cập nhật thành công!", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi sửa:\n" + ex.Message,
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // ── Xóa lớp khỏi DB ──────────────────────────────────────────────────
+        private void BtnXoa_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtMaID.Text))
+            {
+                MessageBox.Show("Vui lòng chọn một lớp để xóa!",
+                    "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var result = MessageBox.Show("Bạn có chắc muốn xóa lớp này?", "Xác nhận",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (result != DialogResult.Yes) return;
+
+            try
+            {
+                string sql = "DELETE FROM [qlsv].[dbo].[tbl_lophoc] WHERE id=@id";
+                using (var conn = new SqlConnection(connStr))
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@id", int.Parse(txtMaID.Text.Trim()));
+                    conn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+                HienThiDanhSach(currentKeyword);
+                LamMoi();
+                MessageBox.Show("Xóa thành công!", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi khi xóa:\n" + ex.Message,
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // ── Làm mới form ─────────────────────────────────────────────────────
+        private void LamMoi()
         {
             txtMaID.Clear();
             txtMaLop.Clear();
@@ -118,12 +216,16 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
             txtGhiChu.Clear();
         }
 
+        private void BtnLamMoi_Click(object sender, EventArgs e) => LamMoi();
+
+        // ── Tìm kiếm ─────────────────────────────────────────────────────────
         private void BtnTim_Click(object sender, EventArgs e)
         {
             currentPage = 1;
             HienThiDanhSach(txtTimKiem.Text.Trim().ToLower());
         }
 
+        // ── Click vào dòng trong bảng → điền vào form ────────────────────────
         private void DgvLop_CellClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
@@ -134,17 +236,36 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
             txtGhiChu.Text = row.Cells["GhiChu"].Value?.ToString();
         }
 
-        private void BtnFirst_Click(object sender, EventArgs e) { currentPage = 1; HienThiDanhSach(txtTimKiem.Text.Trim().ToLower()); }
-        private void BtnPrev_Click(object sender, EventArgs e) { if (currentPage > 1) { currentPage--; HienThiDanhSach(txtTimKiem.Text.Trim().ToLower()); } }
-        private void BtnNext_Click(object sender, EventArgs e) { currentPage++; HienThiDanhSach(txtTimKiem.Text.Trim().ToLower()); }
-        private void BtnLast_Click(object sender, EventArgs e)
+        // ── Phân trang ───────────────────────────────────────────────────────
+        private void BtnFirst_Click(object sender, EventArgs e)
         {
-            int total = (int)Math.Ceiling(dsLop.Count / (double)pageSize);
-            currentPage = Math.Max(1, total);
-            HienThiDanhSach(txtTimKiem.Text.Trim().ToLower());
+            currentPage = 1;
+            HienThiDanhSach(currentKeyword);
         }
 
-        private void MnuSinhVien_Click(object sender, EventArgs e) => ViewStudentsRequested?.Invoke(this, EventArgs.Empty);
-        private void MnuDangXuat_Click(object sender, EventArgs e) => LogoutRequested?.Invoke(this, EventArgs.Empty);
+        private void BtnPrev_Click(object sender, EventArgs e)
+        {
+            if (currentPage > 1) { currentPage--; HienThiDanhSach(currentKeyword); }
+        }
+
+        private void BtnNext_Click(object sender, EventArgs e)
+        {
+            currentPage++;
+            HienThiDanhSach(currentKeyword);
+        }
+
+        private void BtnLast_Click(object sender, EventArgs e)
+        {
+            int total = GetTotalCount(currentKeyword);
+            currentPage = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+            HienThiDanhSach(currentKeyword);
+        }
+
+        // ── Menu ─────────────────────────────────────────────────────────────
+        private void MnuSinhVien_Click(object sender, EventArgs e) =>
+            ViewStudentsRequested?.Invoke(this, EventArgs.Empty);
+
+        private void MnuDangXuat_Click(object sender, EventArgs e) =>
+            LogoutRequested?.Invoke(this, EventArgs.Empty);
     }
 }
