@@ -217,42 +217,43 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
-        // ── Xóa ───────────────────────────────────────────────────
+        // feat: Xóa sinh viên khỏi hệ thống
         private void BtnXoa_Click(object sender, EventArgs e)
         {
             if (dgvSinhVien.CurrentRow == null) return;
 
-            string idXoa = dgvSinhVien.CurrentRow.Cells["MaSV"].Value?.ToString();
+            string idXoa = dgvSinhVien.CurrentRow.Cells["MaSV"].Value?.ToString() ?? string.Empty;
 
-            var result = MessageBox.Show("Bạn có chắc muốn xóa sinh viên này?", "Xác nhận",
-                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            DialogResult confirm = MessageBox.Show(
+                "Bạn có chắc muốn xóa sinh viên này?",
+                "Xác nhận xóa",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
 
-            if (result == DialogResult.Yes)
+            if (confirm != DialogResult.Yes) return;
+
+            try
             {
-                try
-                {
-                    using (SqlConnection con = GetConnection())
-                    {
-                        con.Open();
-                        string sql = "DELETE FROM tbl_sinhviens WHERE id = @id";
-                        SqlCommand cmd = new SqlCommand(sql, con);
-                        cmd.Parameters.AddWithValue("@id", int.Parse(idXoa));
-                        cmd.ExecuteNonQuery();
-                    }
+                const string sql = "DELETE FROM tbl_sinhviens WHERE id = @id";
 
-                    HienThiDanhSach();
-                    MessageBox.Show("Xóa sinh viên thành công!", "Thông báo",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch (Exception ex)
+                using (SqlConnection con = GetConnection())
+                using (SqlCommand cmd = new SqlCommand(sql, con))
                 {
-                    MessageBox.Show("Lỗi xóa sinh viên:\n" + ex.Message, "Lỗi",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    cmd.Parameters.AddWithValue("@id", int.Parse(idXoa));
+                    con.Open();
+                    cmd.ExecuteNonQuery();
                 }
+
+                HienThiDanhSach();
+                MessageBox.Show("Xóa sinh viên thành công!", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi xóa sinh viên:\n" + ex.Message, "Lỗi",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
         // ── Làm mới ───────────────────────────────────────────────
         private void BtnLamMoi_Click(object sender, EventArgs e)
         {
