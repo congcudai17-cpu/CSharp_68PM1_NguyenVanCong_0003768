@@ -299,27 +299,41 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
             }
         }
 
-        // ── Chọn dòng trên DataGridView → điền vào form ───────────
+        // feat: Xử lý sự kiện click vào dòng DataGridView
         private void DgvSinhVien_CellClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
-            var row = dgvSinhVien.Rows[e.RowIndex];
 
-            txtMaSV.Text = row.Cells["MaSV"].Value?.ToString();
-            txtHoTen.Text = row.Cells["HoTen"].Value?.ToString();
+            DataGridViewRow row = dgvSinhVien.Rows[e.RowIndex];
 
-            string gt = row.Cells["GioiTinh"].Value?.ToString();
-            cboGioiTinh.SelectedItem = gt ?? "Nam";
+            // Điền mã sinh viên và họ tên
+            txtMaSV.Text = row.Cells["MaSV"].Value?.ToString() ?? string.Empty;
+            txtHoTen.Text = row.Cells["HoTen"].Value?.ToString() ?? string.Empty;
 
-            if (DateTime.TryParseExact(row.Cells["NgaySinh"].Value?.ToString(),
-                    "dd/MM/yyyy", null,
-                    System.Globalization.DateTimeStyles.None, out DateTime ngay))
-                dtpNgaySinh.Value = ngay;
+            // Điền giới tính
+            string gioiTinh = row.Cells["GioiTinh"].Value?.ToString() ?? "Nam";
+            if (cboGioiTinh.Items.Contains(gioiTinh))
+                cboGioiTinh.SelectedItem = gioiTinh;
 
-            string lop = row.Cells["Lop"].Value?.ToString();
+            // Điền ngày sinh
+            string ngaySinhStr = row.Cells["NgaySinh"].Value?.ToString() ?? string.Empty;
+            if (DateTime.TryParseExact(ngaySinhStr, "dd/MM/yyyy",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out DateTime ngaySinh))
+            {
+                dtpNgaySinh.Value = ngaySinh;
+            }
+
+            // Điền lớp học
+            string maLop = row.Cells["Lop"].Value?.ToString() ?? string.Empty;
             foreach (var item in cboLop.Items)
-                if (item.ToString().StartsWith(lop))
-                { cboLop.SelectedItem = item; break; }
+            {
+                if (item.ToString().StartsWith(maLop))
+                {
+                    cboLop.SelectedItem = item;
+                    break;
+                }
+            }
         }
 
         private void MnuLop_Click(object sender, EventArgs e)
