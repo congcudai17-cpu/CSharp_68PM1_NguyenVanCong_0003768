@@ -98,26 +98,28 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
             }
         }
 
-        // ── Thêm lớp mới vào DB ──────────────────────────────────────────────
+        // feat: Thêm lớp học mới vào hệ thống
         private void BtnThem_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtMaLop.Text) ||
-                string.IsNullOrWhiteSpace(txtTenLop.Text))
+            string maLop = txtMaLop.Text.Trim();
+            string tenLop = txtTenLop.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(maLop) || string.IsNullOrWhiteSpace(tenLop))
             {
                 MessageBox.Show("Vui lòng nhập đầy đủ Mã lớp và Tên lớp!",
                     "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
+            const string sql = @"INSERT INTO [qlsv].[dbo].[tbl_lophoc] (malop, tenlop, ghichu)
+                         VALUES (@malop, @tenlop, @ghichu)";
             try
             {
-                string sql = @"INSERT INTO [qlsv].[dbo].[tbl_lophoc] (malop, tenlop, ghichu)
-                               VALUES (@malop, @tenlop, @ghichu)";
                 using (var conn = new SqlConnection(connStr))
                 using (var cmd = new SqlCommand(sql, conn))
                 {
-                    cmd.Parameters.AddWithValue("@malop", txtMaLop.Text.Trim());
-                    cmd.Parameters.AddWithValue("@tenlop", txtTenLop.Text.Trim());
+                    cmd.Parameters.AddWithValue("@malop", maLop);
+                    cmd.Parameters.AddWithValue("@tenlop", tenLop);
                     cmd.Parameters.AddWithValue("@ghichu", txtGhiChu.Text.Trim());
                     conn.Open();
                     cmd.ExecuteNonQuery();
@@ -134,7 +136,7 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
             }
         }
 
-        // ── Sửa lớp trong DB ─────────────────────────────────────────────────
+        // feat: Cập nhật thông tin lớp học
         private void BtnSua_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtMaID.Text))
@@ -144,11 +146,13 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
                 return;
             }
 
+            const string sql = @"UPDATE [qlsv].[dbo].[tbl_lophoc]
+                         SET malop  = @malop,
+                             tenlop = @tenlop,
+                             ghichu = @ghichu
+                         WHERE id = @id";
             try
             {
-                string sql = @"UPDATE [qlsv].[dbo].[tbl_lophoc]
-                               SET malop=@malop, tenlop=@tenlop, ghichu=@ghichu
-                               WHERE id=@id";
                 using (var conn = new SqlConnection(connStr))
                 using (var cmd = new SqlCommand(sql, conn))
                 {
@@ -171,7 +175,7 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
             }
         }
 
-        // ── Xóa lớp khỏi DB ──────────────────────────────────────────────────
+        // feat: Xóa lớp học khỏi hệ thống
         private void BtnXoa_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtMaID.Text))
@@ -181,13 +185,14 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
                 return;
             }
 
-            var result = MessageBox.Show("Bạn có chắc muốn xóa lớp này?", "Xác nhận",
+            DialogResult confirm = MessageBox.Show(
+                "Bạn có chắc muốn xóa lớp này?", "Xác nhận xóa",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            if (result != DialogResult.Yes) return;
+            if (confirm != DialogResult.Yes) return;
 
+            const string sql = "DELETE FROM [qlsv].[dbo].[tbl_lophoc] WHERE id = @id";
             try
             {
-                string sql = "DELETE FROM [qlsv].[dbo].[tbl_lophoc] WHERE id=@id";
                 using (var conn = new SqlConnection(connStr))
                 using (var cmd = new SqlCommand(sql, conn))
                 {
