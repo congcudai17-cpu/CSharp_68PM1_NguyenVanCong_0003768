@@ -265,42 +265,44 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
             HienThiDanhSach();
         }
 
-        // ── Tìm kiếm ──────────────────────────────────────────────
+        // feat: Tìm kiếm và phân trang danh sách sinh viên
         private void BtnTim_Click(object sender, EventArgs e)
         {
             string keyword = txtTimKiem.Text.Trim();
 
+            const string sql = @"SELECT s.id,
+                                s.hoten,
+                                s.gioitinh,
+                                CONVERT(varchar, s.ngaysinh, 103) AS ngaysinh,
+                                s.malop
+                         FROM   tbl_sinhviens s
+                         WHERE  CAST(s.id AS varchar) LIKE @kw
+                             OR s.hoten  LIKE @kw
+                             OR s.malop  LIKE @kw
+                         ORDER BY s.id";
+
             try
             {
+                DataTable dt = new DataTable();
+
                 using (SqlConnection con = GetConnection())
+                using (SqlCommand cmd = new SqlCommand(sql, con))
                 {
-                    con.Open();
-                    string sql = @"SELECT s.id, s.hoten, s.gioitinh,
-                                          CONVERT(varchar, s.ngaysinh, 103) AS ngaysinh,
-                                          s.malop
-                                   FROM tbl_sinhviens s
-                                   WHERE CAST(s.id AS varchar) LIKE @kw 
-                                      OR s.hoten LIKE @kw 
-                                      OR s.malop LIKE @kw
-                                   ORDER BY s.id";
-                    SqlCommand cmd = new SqlCommand(sql, con);
                     cmd.Parameters.AddWithValue("@kw", "%" + keyword + "%");
+                    con.Open();
+                    new SqlDataAdapter(cmd).Fill(dt);
+                }
 
-                    SqlDataAdapter da = new SqlDataAdapter(cmd);
-                    DataTable dt = new DataTable();
-                    da.Fill(dt);
-
-                    dgvSinhVien.Rows.Clear();
-                    foreach (DataRow row in dt.Rows)
-                    {
-                        dgvSinhVien.Rows.Add(
-                            row["id"].ToString(),
-                            row["hoten"].ToString(),
-                            row["gioitinh"].ToString(),
-                            row["ngaysinh"].ToString(),
-                            row["malop"].ToString()
-                        );
-                    }
+                dgvSinhVien.Rows.Clear();
+                foreach (DataRow row in dt.Rows)
+                {
+                    dgvSinhVien.Rows.Add(
+                        row["id"].ToString(),
+                        row["hoten"].ToString(),
+                        row["gioitinh"].ToString(),
+                        row["ngaysinh"].ToString(),
+                        row["malop"].ToString()
+                    );
                 }
             }
             catch (Exception ex)
