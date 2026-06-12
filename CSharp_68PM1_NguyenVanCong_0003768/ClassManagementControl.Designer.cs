@@ -41,6 +41,8 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
             txtTimKiem = new TextBox();
             var btnTim = new Button();
             dgvLop = new DataGridView();
+            dgvSinhVien = new DataGridView();
+            lblSinhVien = new Label();
 
             // Phân trang
             var pnlPage = new Panel();
@@ -110,7 +112,7 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
             });
 
             // ── Panel phải ────────────────────────────────────────
-            pnlPhai.Size = new Size(820, 750);
+            pnlPhai.Size = new Size(820, 1100);
             pnlPhai.Location = new Point(450, 30);
 
             lblTim.Text = "Tìm kiếm (Mã ID / Mã lớp / Tên lớp):";
@@ -157,12 +159,32 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
             lblTrang.Font = new Font("Arial", 10);
 
             pnlPage.Controls.AddRange(new Control[] { btnFirst, btnPrev, lblTrang, btnNext, btnLast });
-            pnlPhai.Controls.AddRange(new Control[] { lblTim, txtTimKiem, btnTim, dgvLop, pnlPage });
+
+            // Label sinh viên
+            lblSinhVien.Text = "Danh sách sinh viên của lớp";
+            lblSinhVien.Location = new Point(0, 725);
+            lblSinhVien.AutoSize = true;
+            lblSinhVien.Font = new Font("Arial", 10, FontStyle.Bold);
+
+            // DataGridView sinh viên
+            dgvSinhVien.Location = new Point(0, 750);
+            dgvSinhVien.Size = new Size(820, 300);
+            dgvSinhVien.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgvSinhVien.ReadOnly = true;
+            dgvSinhVien.AllowUserToAddRows = false;
+            dgvSinhVien.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvSinhVien.ColumnHeadersDefaultCellStyle.BackColor = Color.LightGreen;
+            dgvSinhVien.Columns.Add("id", "Mã SV");
+            dgvSinhVien.Columns.Add("hoten", "Họ tên");
+            dgvSinhVien.Columns.Add("gioitinh", "Giới tính");
+            dgvSinhVien.Columns.Add("ngaysinh", "Ngày sinh");
+
+            pnlPhai.Controls.AddRange(new Control[] { lblTim, txtTimKiem, btnTim, dgvLop, pnlPage, lblSinhVien, dgvSinhVien });
 
             // ── UserControl ───────────────────────────────────────
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = AutoScaleMode.Font;
-            this.Size = new Size(1300, 800);
+            this.Size = new Size(1300, 1250);
             this.Controls.Add(menu);
             this.Controls.Add(pnlTrai);
             this.Controls.Add(pnlPhai);
@@ -189,7 +211,9 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
         #endregion
 
         private DataGridView dgvLop;
+        private DataGridView dgvSinhVien;
         private TextBox txtMaID, txtMaLop, txtTenLop, txtGhiChu, txtTimKiem;
         private Label lblTrang;
+        private Label lblSinhVien;
     }
 }

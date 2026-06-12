@@ -230,16 +230,19 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
             HienThiDanhSach(txtTimKiem.Text.Trim().ToLower());
         }
 
-        // ── Click vào dòng trong bảng → điền vào form ────────────────────────
+        // feat: Click vào dòng trong bảng → điền vào form
         private void DgvLop_CellClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
-            var row = dgvLop.Rows[e.RowIndex];
-            txtMaID.Text = row.Cells["MaID"].Value?.ToString();
-            txtMaLop.Text = row.Cells["MaLop"].Value?.ToString();
-            txtTenLop.Text = row.Cells["TenLop"].Value?.ToString();
-            txtGhiChu.Text = row.Cells["GhiChu"].Value?.ToString();
+            DataGridViewRow row = dgvLop.Rows[e.RowIndex];
+            txtMaID.Text = row.Cells["MaID"].Value?.ToString() ?? string.Empty;
+            txtMaLop.Text = row.Cells["MaLop"].Value?.ToString() ?? string.Empty;
+            txtTenLop.Text = row.Cells["TenLop"].Value?.ToString() ?? string.Empty;
+            txtGhiChu.Text = row.Cells["GhiChu"].Value?.ToString() ?? string.Empty;
+            // Hiển thị sinh viên thuộc lớp này
+            HienThiSinhVienTheoLop(txtMaLop.Text);
         }
+        
 
         // ── Phân trang ───────────────────────────────────────────────────────
         private void BtnFirst_Click(object sender, EventArgs e)
@@ -272,5 +275,48 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
 
         private void MnuDangXuat_Click(object sender, EventArgs e) =>
             LogoutRequested?.Invoke(this, EventArgs.Empty);
+        // feat: Hiển thị danh sách sinh viên theo lớp được chọn
+        private void HienThiSinhVienTheoLop(string maLop)
+        {
+            dgvSinhVien.Rows.Clear();
+            if (string.IsNullOrWhiteSpace(maLop)) return;
+
+            const string sql = @"SELECT s.id,
+                                        s.hoten,
+                                        s.gioitinh,
+                                        CONVERT(varchar, s.ngaysinh, 103) AS ngaysinh
+                                 FROM   tbl_sinhviens s
+                                 WHERE  s.malop = @malop
+                                 ORDER BY s.id";
+            try
+            {
+                using (var conn = new SqlConnection(connStr))
+                using (var cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@malop", maLop);
+                    conn.Open();
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            dgvSinhVien.Rows.Add(
+                                reader["id"].ToString(),
+                                reader["hoten"].ToString(),
+                                reader["gioitinh"].ToString(),
+                                reader["ngaysinh"].ToString()
+                            );
+                        }
+                    }
+                }
+                lblSinhVien.Text = $"Sinh viên lớp: {maLop}  |  {dgvSinhVien.Rows.Count} sinh viên";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Lỗi tải danh sách sinh viên:\n" + ex.Message,
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+
     }
 }
