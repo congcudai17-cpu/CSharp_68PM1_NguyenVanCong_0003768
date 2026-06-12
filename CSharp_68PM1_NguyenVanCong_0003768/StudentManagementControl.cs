@@ -160,40 +160,50 @@ namespace CSharp_68PM1_NguyenVanCong_0003768
             }
         }
 
-        // ── Sửa ───────────────────────────────────────────────────
+        // feat: Cập nhật thông tin sinh viên
         private void BtnSua_Click(object sender, EventArgs e)
         {
             if (dgvSinhVien.CurrentRow == null) return;
 
-            string idGoc = dgvSinhVien.CurrentRow.Cells["MaSV"].Value?.ToString();
+            string idGoc = dgvSinhVien.CurrentRow.Cells["MaSV"].Value?.ToString() ?? string.Empty;
+            string idMoi = txtMaSV.Text.Trim();
 
-            // ✅ Kiểm tra trùng mã SV (bỏ qua chính nó)
-            if (txtMaSV.Text.Trim() != idGoc &&
-                KiemTraTrungMaSV(txtMaSV.Text.Trim(), boQuaId: idGoc))
+            // Kiểm tra trùng mã SV (bỏ qua chính nó)
+            if (idMoi != idGoc && KiemTraTrungMaSV(idMoi, boQuaId: idGoc))
             {
-                MessageBox.Show("Mã sinh viên \"" + txtMaSV.Text.Trim() + "\" đã tồn tại!\nVui lòng nhập mã khác.",
-                    "Trùng mã sinh viên", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(
+                    $"Mã sinh viên \"{idMoi}\" đã tồn tại!\nVui lòng nhập mã khác.",
+                    "Trùng mã sinh viên",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
                 txtMaSV.Focus();
                 txtMaSV.SelectAll();
                 return;
             }
 
+            // Lấy mã lớp từ ComboBox
+            string maLop = cboLop.Text.Split('-')[0].Trim();
+
             try
             {
+                string sql = @"UPDATE tbl_sinhviens 
+                       SET id       = @idMoi,
+                           hoten    = @hoten,
+                           gioitinh = @gioitinh,
+                           ngaysinh = @ngaysinh,
+                           malop    = @malop
+                       WHERE id = @idGoc";
+
                 using (SqlConnection con = GetConnection())
+                using (SqlCommand cmd = new SqlCommand(sql, con))
                 {
-                    con.Open();
-                    string sql = @"UPDATE tbl_sinhviens 
-                                   SET id = @idMoi, hoten = @hoten, gioitinh = @gioitinh, 
-                                       ngaysinh = @ngaysinh, malop = @malop
-                                   WHERE id = @idGoc";
-                    SqlCommand cmd = new SqlCommand(sql, con);
-                    cmd.Parameters.AddWithValue("@idMoi", int.Parse(txtMaSV.Text.Trim()));
+                    cmd.Parameters.AddWithValue("@idMoi", int.Parse(idMoi));
                     cmd.Parameters.AddWithValue("@hoten", txtHoTen.Text.Trim());
                     cmd.Parameters.AddWithValue("@gioitinh", cboGioiTinh.Text);
                     cmd.Parameters.AddWithValue("@ngaysinh", dtpNgaySinh.Value.Date);
-                    cmd.Parameters.AddWithValue("@malop", cboLop.Text.Split('-')[0].Trim());
+                    cmd.Parameters.AddWithValue("@malop", maLop);
                     cmd.Parameters.AddWithValue("@idGoc", int.Parse(idGoc));
+                    con.Open();
                     cmd.ExecuteNonQuery();
                 }
 
